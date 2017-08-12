@@ -56,6 +56,7 @@ func sendEvent(e *Event, cb func(*http.Response, error)) {
 }
 
 func alert2eventHandler(w http.ResponseWriter, r *http.Request) {
+	alertsNumber++
 	var alert Alert
 	if err := json.NewDecoder(r.Body).Decode(&alert); err != nil {
 		log.Println(err)
