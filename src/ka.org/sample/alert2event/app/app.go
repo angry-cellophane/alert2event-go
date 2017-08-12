@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"net/http"
@@ -11,7 +11,7 @@ import (
 
 
 var alertsNumber int = 0
-
+var eventApiUrl string
 
 type Alert struct {
 	Summary  string `json: summary`
@@ -24,18 +24,6 @@ type Event struct {
 	Summary string `json: summary`
 }
 
-func dummyEventApi(w http.ResponseWriter, r *http.Request) {
-	var event Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	log.Println(event)
-	w.WriteHeader(http.StatusOK)
-}
-
 func alert2event(a Alert) Event {
 	return Event{
 		Name: "Event",
@@ -44,34 +32,36 @@ func alert2event(a Alert) Event {
 	}
 }
 
-func sendEvent(e *Event, cb func(*http.Response, error)) {
-	event, err := json.Marshal(e)
-	if err != nil {
-		cb(nil, err)
-		return
-	}
-
-	resp, err := http.Post("http://localhost:8080/event", "application/json", bytes.NewBuffer(event))
-	cb(resp, err)
-}
-
 func alert2eventHandler(w http.ResponseWriter, r *http.Request) {
 	alertsNumber++
 	var alert Alert
 	if err := json.NewDecoder(r.Body).Decode(&alert); err != nil {
 		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	event := alert2event(alert)
-	go sendEvent(&event, func(resp *http.Response, err error) {
-		if err != nil {
-			log.Println("sendEvent cb: " + err.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-		w.WriteHeader(http.StatusOK)
-	})
+	resp, err := http.Post(eventApiUrl, "application/json", bytes.NewBuffer(eventBytes))
+
+	if err != nil || resp.StatusCode != 200 {
+		switch  {
+		case err != nil:
+			log.Println("Cannot send event to EventAPI: " + err.Error())
+		case resp.StatusCode != 200:
+			log.Println("POST " + eventApiUrl + " returned " + resp.Status)
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,17 +82,17 @@ func handler(pattern, method string, handler func(http.ResponseWriter, *http.Req
 	})
 }
 
-
 type App struct {
+	EventApiUrl string
 	Port int
 	server *http.Server
 }
 
 func (app *App) Start() {
 	app.server = &http.Server{Addr: ":" + strconv.Itoa(app.Port)}
+	eventApiUrl = app.EventApiUrl
 
 	handler("/alert", "POST", alert2eventHandler)
-	handler("/event", "POST", dummyEventApi)
 	handler("/prometheus", "GET", metricsHandler)
 
 	if err := app.server.ListenAndServe(); err != nil {
@@ -114,8 +104,4 @@ func (app *App) Stop() {
 	if err:= app.server.Shutdown(nil); err != nil {
 		panic(err)
 	}
-}
-func main() {
-	app := App{Port: 8080}
-	app.Start()
 }
