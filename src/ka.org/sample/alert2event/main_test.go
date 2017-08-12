@@ -5,7 +5,6 @@ import (
 	"time"
 	"net/http"
 	"encoding/json"
-	"ka.org/sample/alert2event/app"
 	"os"
 	"bytes"
 	"sync"
@@ -43,7 +42,7 @@ func TestServerIsAvailable(t *testing.T) {
 }
 
 func TestEventApiReceivesEvents(t *testing.T) {
-	alert := app.Alert{
+	alert := Alert{
 		Summary: "test TestEventApiReceivesEvents summary",
 		Severity: "WARNING",
 	}
@@ -72,7 +71,7 @@ func runEventApiStub() {
 			return
 		}
 
-		var event app.Event
+		var event Event
 		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -84,18 +83,18 @@ func runEventApiStub() {
 }
 
 type Events struct {
-	events []app.Event
+	events []Event
 	mux    sync.Mutex
 }
 
-func (e *Events) add(event app.Event) {
+func (e *Events) add(event Event) {
 	e.mux.Lock()
 	defer e.mux.Unlock()
 
 	e.events = append(e.events, event)
 }
 
-func (e *Events) find(summary string) *app.Event {
+func (e *Events) find(summary string) *Event {
 	e.mux.Lock()
 	defer e.mux.Unlock()
 
