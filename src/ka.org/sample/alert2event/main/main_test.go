@@ -11,33 +11,6 @@ import (
 	"sync"
 )
 
-type Events struct {
-	events []app.Event
-	mux    sync.Mutex
-}
-
-func (e *Events) add(event app.Event) {
-	e.mux.Lock()
-	defer e.mux.Unlock()
-
-	e.events = append(e.events, event)
-}
-
-func (e *Events) find(summary string) *app.Event {
-	e.mux.Lock()
-	defer e.mux.Unlock()
-
-	for _, event := range e.events {
-		if event.Summary == summary {
-			return &event
-		}
-	}
-
-	return nil
-}
-
-var events = Events{}
-
 func TestMain(m *testing.M) {
 	runEventApiStub()
 	os.Setenv("EVENTAPI_URL", "http://localhost:8080/event")
@@ -109,3 +82,30 @@ func runEventApiStub() {
 		w.WriteHeader(http.StatusOK)
 	})
 }
+
+type Events struct {
+	events []app.Event
+	mux    sync.Mutex
+}
+
+func (e *Events) add(event app.Event) {
+	e.mux.Lock()
+	defer e.mux.Unlock()
+
+	e.events = append(e.events, event)
+}
+
+func (e *Events) find(summary string) *app.Event {
+	e.mux.Lock()
+	defer e.mux.Unlock()
+
+	for _, event := range e.events {
+		if event.Summary == summary {
+			return &event
+		}
+	}
+
+	return nil
+}
+
+var events = Events{}
