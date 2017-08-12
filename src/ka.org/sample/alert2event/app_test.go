@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 	"net/http"
-	"."
+	"ka.org/sample/alert2event"
 )
 
 func TestServerAvailable(t *testing.T) {
