@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"net/http"
-	"encoding/json"
-	"log"
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 )
 
 var alertsNumber int = 0
@@ -33,9 +33,9 @@ func alert2eventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventInBytes, err := json.Marshal(Event{
-		Name: "Event",
+		Name:    "Event",
 		Summary: alert.Summary,
-		Type: alert.Severity,
+		Type:    alert.Severity,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +45,7 @@ func alert2eventHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.Post(eventApiUrl, "application/json", bytes.NewBuffer(eventInBytes))
 	if err != nil || resp.StatusCode != 200 {
-		switch  {
+		switch {
 		case err != nil:
 			log.Println("Cannot send event to EventAPI: " + err.Error())
 		case resp.StatusCode != 200:

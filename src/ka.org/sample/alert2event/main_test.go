@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"os"
+	"sync"
 	"testing"
 	"time"
-	"net/http"
-	"encoding/json"
-	"os"
-	"bytes"
-	"sync"
 )
 
 func TestMain(m *testing.M) {
@@ -43,7 +43,7 @@ func TestServerIsAvailable(t *testing.T) {
 
 func TestEventApiReceivesEvents(t *testing.T) {
 	alert := Alert{
-		Summary: "test TestEventApiReceivesEvents summary",
+		Summary:  "test TestEventApiReceivesEvents summary",
 		Severity: "WARNING",
 	}
 	alertBytes, _ := json.Marshal(alert)
