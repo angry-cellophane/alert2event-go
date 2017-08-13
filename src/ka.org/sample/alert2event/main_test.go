@@ -7,9 +7,11 @@ import (
 	"os"
 	"sync"
 	"testing"
-	"time"
 )
 
+/*
+Start server first, then run other tests
+*/
 func TestMain(m *testing.M) {
 	runEventApiStub()
 	os.Setenv("EVENTAPI_URL", "http://localhost:8080/event")
@@ -21,23 +23,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestServerIsAvailable(t *testing.T) {
-	for i := 0; i < 5; i++ {
-		resp, err := http.Get("http://localhost:8080/prometheus")
-
-		switch {
-		case err != nil && i != 4:
-			continue
-		case err != nil && i == 4:
-			t.Fatal("Server hasn't started up in 500ms")
-		case err != nil:
-			time.Sleep(100 * time.Millisecond)
-		case err == nil && resp.StatusCode == 200:
-			break
-		case err == nil && resp.StatusCode != 200:
-			t.Fatal("Server is up but /prometheus returned unknown answer " + resp.Status)
-		default:
-			t.FailNow()
-		}
+	resp, err := http.Get("http://localhost:8080/prometheus")
+	switch {
+	case err != nil:
+		t.Fatal("GET /prometheus returned an error " + err.Error())
+	case resp.StatusCode != 200:
+		t.Fatal("Server is up but /prometheus returned unknown answer " + resp.Status)
 	}
 }
 
@@ -49,17 +40,14 @@ func TestEventApiReceivesEvents(t *testing.T) {
 	alertBytes, _ := json.Marshal(alert)
 
 	resp, err := http.Post("http://localhost:8080/alert", "application/json", bytes.NewBuffer(alertBytes))
-	if err != nil {
+	switch {
+	case err != nil:
 		t.Fatal("POST /alert returned an exception " + err.Error())
-	}
-
-	if resp.StatusCode != 200 {
+	case resp.StatusCode != 200:
 		t.Fatal("POST /alert status != 200 -> " + resp.Status)
 	}
 
-	foundEvent := events.find(alert.Summary)
-
-	if foundEvent == nil {
+	if _, ok := events.find(func(e Event) bool { return e.Summary == alert.Summary }); !ok {
 		t.Fatal("EventAPI stub has not received the expected test event")
 	}
 }
@@ -94,17 +82,17 @@ func (e *Events) add(event Event) {
 	e.events = append(e.events, event)
 }
 
-func (e *Events) find(summary string) *Event {
+func (e *Events) find(predicate func(Event) bool) (*Event, bool) {
 	e.mux.Lock()
 	defer e.mux.Unlock()
 
 	for _, event := range e.events {
-		if event.Summary == summary {
-			return &event
+		if predicate(event) {
+			return &event, true
 		}
 	}
 
-	return nil
+	return nil, false
 }
 
 var events = Events{}
