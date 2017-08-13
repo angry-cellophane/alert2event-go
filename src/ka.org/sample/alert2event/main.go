@@ -80,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := &http.Server{Addr: ":8080"}
+	app := http.Server{Addr: ":8080"}
 
 	handler("/alert", "POST", alert2eventHandler)
 	handler("/prometheus", "GET", metricsHandler)
