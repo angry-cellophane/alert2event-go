@@ -9,6 +9,10 @@ import (
 	"os"
 )
 
+const prometheusEndpointResponse = `# HELP alerts_number The total number of alerts
+# TYPE alerts_number counter
+alerts_number %d`
+
 var alertsNumber int = 0
 var eventApiUrl string
 
@@ -56,10 +60,7 @@ func alert2eventHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
-	response := `# HELP alerts_number The total number of alerts
-# TYPE alerts_number counter
-alerts_number %d`
-	w.Write([]byte(fmt.Sprintf(response, alertsNumber)))
+	w.Write([]byte(fmt.Sprintf(prometheusEndpointResponse, alertsNumber)))
 }
 
 func handler(pattern, method string, handler func(http.ResponseWriter, *http.Request)) {
@@ -80,11 +81,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := http.Server{Addr: ":8080"}
-
 	handler("/alert", "POST", alert2eventHandler)
 	handler("/prometheus", "GET", metricsHandler)
 
+	app := http.Server{Addr: ":8080"}
 	if err := app.ListenAndServe(); err != nil {
 		log.Fatal(err)
 		os.Exit(1)
